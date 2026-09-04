@@ -1,0 +1,26 @@
+#Dependencies
+node_modules/
+
+#Build output
+dist/
+build/
+
+#Environment variables (secrets - never commit these)
+.env
+.env.local
+.env.*.local
+
+#logs
+*.log
+npm-debug.log*
+
+#OS files
+.DS_Store
+Thumbs.db
+
+#Editor
+.vscode/*
+!.vscode/extensions.json
+
+#Docker volumes (if any get created locally)
+docker-data/
