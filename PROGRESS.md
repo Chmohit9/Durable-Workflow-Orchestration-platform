@@ -12,4 +12,12 @@
 
 **Concept learned:** Why a monorepo with workspaces — one shared source of truth for types (e.g. `WorkflowEvent`) instead of copy-pasted definitions across API/worker/UI that drift out of sync. Workspaces create real symlinks on disk, not published packages.
 
-**Next up:** Docker Compose for local Postgres + Redis.
+### Day 1 (continued) 
+- Added `docker-compose.yml`: Postgres 16 (with named volume `postgres_data` for persistance) + Redis 7, both version-pinned
+-Verified Postgres reachable via `psql` (`SELECT version()` succeeded)
+-Verified Redis reachable via `redis-cli PING` (`PONG`)
+- Committed and pushed: `feat: add docker-compose for local Postgres 16 + Redis 7`
+
+**Concept learned:** Docker image (blueprints) vs. containers (running,isolated instances); why version-pinning images matters for reproduciblity; port mapping (`host:container`) to reach a sealed container from the host machine; named volumes to persist Postgres data across container restarts (deliberately skipped for Redis, since it's just a task queue, not our source of truth).
+
+**Next up:** Write the first database migration - the `workflows`, `workflow_events`, `activities`, `timers` tables.
