@@ -39,3 +39,26 @@ Installed `node-pg-migrate`, `pg`, `dotenv` in `apps/api`; created `.env` (gitig
 **What's still theoretical (not yet built/tested):** RLS policies themselves (declared conceptually, not implemented — that's Phase 4); append-only enforcement (no DB-level trigger blocking UPDATE/DELETE yet, currently just a convention); the actual replay/reconstruction logic (no code written yet — only the table exists).
 
 **Next up:** `workflow_events` table migration — the actual append-only event log.
+
+---
+
+### Day 2 (continued) — `workflow_events` table migration
+
+- Wrote and applied migration: `workflow_events` (event_id UUID PK, workflow_id UUID NOT NULL FK → workflows, sequence_number BIGSERIAL for tie-free ordering, event_type VARCHAR w/ CHECK constrained to 5 known types, payload JSONB, time_stamp)
+- Added index `(workflow_id, sequence_number)` to support fast, correctly-ordered per-workflow replay reads
+- Verified via `psql \d workflow_events` — confirmed FK constraint, CHECK constraint, sequence default (`nextval(...)`), and both indexes present
+- Committed and pushed: `feat: add workflow_events table migration (append-only event log, FK to workflows, sequence_number for tie-free ordering)`
+
+**Concepts learned:**
+- Why `event_type` (closed, engine-level, ~5 mechanical event kinds) is the opposite design case from `workflows.type` (open-ended business content) — same-looking "string category" columns, opposite constraint decisions, based on how often new values get added and who adds them
+- Why timestamp alone can't guarantee tie-free ordering (finite clock precision — real simultaneity is possible), vs. why a DB-managed auto-incrementing sequence (BIGSERIAL) can (atomic counter, not a measurement — Postgres serializes assignment so duplicates are structurally impossible)
+- Composite index column order matters and should match the real query access pattern: `(workflow_id, sequence_number)` groups by workflow first (matches "give me all of workflow X's events, in order"), not the reverse
+- Foreign key from `workflow_events.workflow_id` → `workflows.workflow_id` enforces structural integrity (no event can reference a nonexistent workflow) — contrasted with `workflows.tenant_id` having no FK, purely because no `tenants` table exists yet, not a difference in relationship type
+
+**Comprehension checkpoint (5 questions) — results:** 2/5 solid on first pass, 3/5 needed correction/sharpening (mechanism of FK vs NOT NULL enforcement; how adding a new event_type is a constraint change on the existing column, not a new table; FK-existence reasoning restated more precisely). No fundamental misunderstanding — precision-level fixes, now resolved.
+
+**Known TODO (explicitly deferred, not forgotten):** append-only is currently a *convention only* — no DB-level trigger or permission blocks UPDATE/DELETE on `workflow_events` yet. Decision made to batch this with RLS policy implementation and other security hardening into one dedicated pass later, rather than now.
+
+**What's still theoretical:** RLS (not implemented); append-only enforcement (not implemented, tracked as TODO above); replay/reconstruction logic (no code yet — tables only).
+
+**Next up:** `activities` table migration.
